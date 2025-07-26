@@ -1,3 +1,4 @@
+import time
 from pyrogram import filters
 
 from BrandrdXMusic import YouTube, app
@@ -32,12 +33,20 @@ async def play_live_stream(client, CallbackQuery, _):
     mystic = await CallbackQuery.message.reply_text(
         _["play_2"].format(channel) if channel else _["play_1"]
     )
+
+    # Timing log: start fetch
+    start_fetch = time.time()
     try:
         details, track_id = await YouTube.track(vidid, True)
     except:
         return await mystic.edit_text(_["play_3"])
+    fetch_time = time.time() - start_fetch
+    print(f"[LiveStream] Track fetch time: {fetch_time:.2f} seconds")
+
     ffplay = True if fplay == "f" else None
     if not details["duration_min"]:
+        # Timing log: start stream
+        start_stream = time.time()
         try:
             await stream(
                 _,
@@ -55,6 +64,8 @@ async def play_live_stream(client, CallbackQuery, _):
             ex_type = type(e).__name__
             err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
             return await mystic.edit_text(err)
+        stream_time = time.time() - start_stream
+        print(f"[LiveStream] Stream start time: {stream_time:.2f} seconds")
     else:
         return await mystic.edit_text("» ɴᴏᴛ ᴀ ʟɪᴠᴇ sᴛʀᴇᴀᴍ.")
     await mystic.delete()
