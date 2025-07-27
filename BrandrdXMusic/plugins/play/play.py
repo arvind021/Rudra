@@ -24,6 +24,7 @@ from BrandrdXMusic.utils.inline import (
 )
 from BrandrdXMusic.utils.logger import play_logs
 from BrandrdXMusic.utils.stream.stream import stream
+from BrandrdXMusic.utils.youtube_api import search_youtube  # <-- YT API import
 from config import BANNED_USERS, lyrical
 
 
@@ -339,8 +340,13 @@ async def play_commnd(
         query = message.text.split(None, 1)[1]
         if "-v" in query:
             query = query.replace("-v", "")
+        # === FAST YOUTUBE API SEARCH ===
+        yt_result = await search_youtube(query)
+        if not yt_result:
+            return await mystic.edit_text(_["play_3"])
+        yt_url = yt_result["url"]
         try:
-            details, track_id = await YouTube.track(query)
+            details, track_id = await YouTube.track(yt_url)
         except:
             return await mystic.edit_text(_["play_3"])
         streamtype = "youtube"
@@ -446,5 +452,3 @@ async def play_commnd(
                 )
                 print(f"Track markup reply ready in {time.time() - start_fetch:.2f} seconds")
                 return await play_logs(message, streamtype=f"URL Searched Inline")
-
-# ...rest of the file remains unchanged (callback queries, etc.) ...
