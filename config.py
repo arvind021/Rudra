@@ -80,6 +80,9 @@ STRING3 = getenv("STRING_SESSION3", None)
 STRING4 = getenv("STRING_SESSION4", None)
 STRING5 = getenv("STRING_SESSION5", None)
 
+# === YOUTUBE API KEY ===
+YOUTUBE_API_KEY = getenv("YOUTUBE_API_KEY", None)  # <-- Add this line
+
 BANNED_USERS = filters.user()
 adminlist = {}
 lyrical = {}
