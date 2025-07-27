@@ -170,7 +170,8 @@ async def play_commnd(
                         config.PLAYLIST_FETCH_LIMIT,
                         message.from_user.id,
                     )
-                except:
+                except Exception as e:
+                    print("YouTube.playlist error:", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "yt"
@@ -183,7 +184,8 @@ async def play_commnd(
             else:
                 try:
                     details, track_id = await YouTube.track(url)
-                except:
+                except Exception as e:
+                    print("YouTube.track error (url mode):", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "youtube"
                 img = details["thumb"]
@@ -200,7 +202,8 @@ async def play_commnd(
             if "track" in url:
                 try:
                     details, track_id = await Spotify.track(url)
-                except:
+                except Exception as e:
+                    print("Spotify.track error:", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "youtube"
                 img = details["thumb"]
@@ -208,7 +211,8 @@ async def play_commnd(
             elif "playlist" in url:
                 try:
                     details, plist_id = await Spotify.playlist(url)
-                except Exception:
+                except Exception as e:
+                    print("Spotify.playlist error:", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spplay"
@@ -217,7 +221,8 @@ async def play_commnd(
             elif "album" in url:
                 try:
                     details, plist_id = await Spotify.album(url)
-                except:
+                except Exception as e:
+                    print("Spotify.album error:", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spalbum"
@@ -226,7 +231,8 @@ async def play_commnd(
             elif "artist" in url:
                 try:
                     details, plist_id = await Spotify.artist(url)
-                except:
+                except Exception as e:
+                    print("Spotify.artist error:", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spartist"
@@ -238,7 +244,8 @@ async def play_commnd(
             if "album" in url:
                 try:
                     details, track_id = await Apple.track(url)
-                except:
+                except Exception as e:
+                    print("Apple.track error:", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "youtube"
                 img = details["thumb"]
@@ -247,7 +254,8 @@ async def play_commnd(
                 spotify = True
                 try:
                     details, plist_id = await Apple.playlist(url)
-                except:
+                except Exception as e:
+                    print("Apple.playlist error:", e)
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "apple"
@@ -258,7 +266,8 @@ async def play_commnd(
         elif await Resso.valid(url):
             try:
                 details, track_id = await Resso.track(url)
-            except:
+            except Exception as e:
+                print("Resso.track error:", e)
                 return await mystic.edit_text(_["play_3"])
             streamtype = "youtube"
             img = details["thumb"]
@@ -266,7 +275,8 @@ async def play_commnd(
         elif await SoundCloud.valid(url):
             try:
                 details, track_path = await SoundCloud.download(url)
-            except:
+            except Exception as e:
+                print("SoundCloud.download error:", e)
                 return await mystic.edit_text(_["play_3"])
             duration_sec = details["duration_sec"]
             if duration_sec > config.DURATION_LIMIT:
@@ -293,6 +303,7 @@ async def play_commnd(
                 except Exception as e:
                     ex_type = type(e).__name__
                     err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
+                    print("SoundCloud stream error:", err)
                     mystic.edit_text(err)
             t = threading.Thread(target=stream_in_thread)
             t.start()
@@ -308,6 +319,7 @@ async def play_commnd(
                     text=_["play_17"],
                 )
             except Exception as e:
+                print("Hotty.stream_call error:", e)
                 return await mystic.edit_text(_["general_2"].format(type(e).__name__))
             await mystic.edit_text(_["str_2"])
             try:
@@ -326,6 +338,7 @@ async def play_commnd(
             except Exception as e:
                 ex_type = type(e).__name__
                 err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
+                print("index stream error:", err)
                 return await mystic.edit_text(err)
             print(f"Index play fetched and streamed in {time.time() - start_fetch:.2f} seconds")
             return await play_logs(message, streamtype="M3u8 or Index Link")
@@ -342,12 +355,14 @@ async def play_commnd(
             query = query.replace("-v", "")
         # === FAST YOUTUBE API SEARCH ===
         yt_result = await search_youtube(query)
+        print("YT API result:", yt_result)  # <-- Debug print
         if not yt_result:
             return await mystic.edit_text(_["play_3"])
         yt_url = yt_result["url"]
         try:
             details, track_id = await YouTube.track(yt_url)
-        except:
+        except Exception as e:
+            print("YouTube.track error:", e)  # <-- Debug print
             return await mystic.edit_text(_["play_3"])
         streamtype = "youtube"
     if str(playmode) == "Direct":
@@ -388,6 +403,7 @@ async def play_commnd(
         except Exception as e:
             ex_type = type(e).__name__
             err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
+            print("Direct stream error:", err)
             return await mystic.edit_text(err)
         print(f"Direct mode stream started in {time.time() - start_fetch:.2f} seconds")
         await mystic.delete()
