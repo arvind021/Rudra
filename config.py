@@ -84,7 +84,22 @@ STRING5 = getenv("STRING_SESSION5", None)
 YOUTUBE_API_KEY = getenv("YOUTUBE_API_KEY", None)  # Already present
 
 # === YOUTUBE COOKIES ===
-YOUTUBE_COOKIES = getenv("YOUTUBE_COOKIES", "cookies.txt")  # <-- Add this line
+# YOUTUBE_COOKIES can be:
+# - a path to a cookies.txt file (e.g., "/app/cookies.txt")
+# - or set YOUTUBE_COOKIES_FILE_CONTENT in your env to the raw cookies.txt contents;
+#   the code below will write it to cookies.txt at startup and use that file.
+YOUTUBE_COOKIES = getenv("YOUTUBE_COOKIES", "cookies.txt")
+YOUTUBE_COOKIES_FILE_CONTENT = getenv("YOUTUBE_COOKIES_FILE_CONTENT", None)
+
+if YOUTUBE_COOKIES_FILE_CONTENT:
+    try:
+        cookies_path = os.path.join(os.getcwd(), "cookies.txt")
+        with open(cookies_path, "w", encoding="utf-8") as _f:
+            _f.write(YOUTUBE_COOKIES_FILE_CONTENT)
+        YOUTUBE_COOKIES = cookies_path
+    except Exception:
+        # if writing fails, keep YOUTUBE_COOKIES as-is; consumer should handle errors
+        pass
 
 BANNED_USERS = filters.user()
 adminlist = {}
