@@ -80,8 +80,13 @@ STRING3 = getenv("STRING_SESSION3", None)
 STRING4 = getenv("STRING_SESSION4", None)
 STRING5 = getenv("STRING_SESSION5", None)
 
+# === EXTERNAL API URL (used as default for YouTube API) ===
+# You can override by setting API_URL in env, otherwise it defaults to https://BabyAPI.Pro
+API_URL = getenv("API_URL", "https://BabyAPI.Pro")
+
 # === YOUTUBE API KEY ===
-YOUTUBE_API_KEY = getenv("YOUTUBE_API_KEY", None)  # Already present
+# If YOUTUBE_API_KEY is not set, we use API_URL as the default (e.g., https://BabyAPI.Pro)
+YOUTUBE_API_KEY = getenv("YOUTUBE_API_KEY", API_URL)  # Already present or default to API_URL
 
 # === YOUTUBE COOKIES ===
 # YOUTUBE_COOKIES can be:
