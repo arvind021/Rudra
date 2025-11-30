@@ -31,37 +31,23 @@ OWNER_ID = int(getenv("OWNER_ID", "7408008545"))
 SUDO_USERS = [7408008545]  # Add more user IDs as needed
 
 ## Fill these variables if you're deploying on heroku.
-# Your heroku app name
 HEROKU_APP_NAME = getenv("HEROKU_APP_NAME")
-# Get it from http://dashboard.heroku.com/account
 HEROKU_API_KEY = getenv("HEROKU_API_KEY")
 
-UPSTREAM_REPO = getenv(
-    "UPSTREAM_REPO",
-    "https://github.com/arvind021/Rudra",
-)
+UPSTREAM_REPO = getenv("UPSTREAM_REPO", "https://github.com/arvind021/Rudra")
 UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "main")
-GIT_TOKEN = getenv(
-    "GIT_TOKEN", None
-)  # Fill this variable if your upstream repository is private
+GIT_TOKEN = getenv("GIT_TOKEN", None)
 
 SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/RU_DRA_098")
 SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/RU_DRA_098")
 
-# Set this to True if you want the assistant to automatically leave chats after an interval
 AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", False))
-
-# Auto Gcast/Broadcast Handler (True = broadcast on , False = broadcast off During Hosting, Dont Do anything here.)
 AUTO_GCAST = os.getenv("AUTO_GCAST")
-
-# Auto Broadcast Message That You Want Use In Auto Broadcast In All Groups.
 AUTO_GCAST_MSG = getenv("AUTO_GCAST_MSG", "")
 
-# Get this credentials from https://developer.spotify.com/dashboard
 SPOTIFY_CLIENT_ID = getenv("SPOTIFY_CLIENT_ID", "bcfe26b0ebc3428882a0b5fb3e872473")
 SPOTIFY_CLIENT_SECRET = getenv("SPOTIFY_CLIENT_SECRET", "907c6a054c214005aeae1fd752273cc4")
 
-# Maximum limit for fetching playlist's track from youtube, spotify, apple links.
 SERVER_PLAYLIST_LIMIT = int(getenv("SERVER_PLAYLIST_LIMIT", "50"))
 PLAYLIST_FETCH_LIMIT = int(getenv("PLAYLIST_FETCH_LIMIT", "25"))
 
@@ -71,40 +57,29 @@ SONG_DOWNLOAD_DURATION_LIMIT = int(getenv("SONG_DOWNLOAD_DURATION_LIMIT", "2000"
 # Telegram audio and video file size limit (in bytes)
 TG_AUDIO_FILESIZE_LIMIT = int(getenv("TG_AUDIO_FILESIZE_LIMIT", 104857600))
 TG_VIDEO_FILESIZE_LIMIT = int(getenv("TG_VIDEO_FILESIZE_LIMIT", 1073741824))
-# Checkout https://www.gbmb.org/mb-to-bytes for converting mb to bytes
 
-# Get your pyrogram v2 session from @BRANDEDSTRINGSESSION_BOT on Telegram
+# Pyrogram String sessions
 STRING1 = getenv("STRING_SESSION",  None)
 STRING2 = getenv("STRING_SESSION2", None)
 STRING3 = getenv("STRING_SESSION3", None)
 STRING4 = getenv("STRING_SESSION4", None)
 STRING5 = getenv("STRING_SESSION5", None)
 
-# === EXTERNAL API URL (used as default for YouTube API) ===
-# You can override by setting API_URL in env, otherwise it defaults to https://BabyAPI.Pro
+# ============================================================
+#  BABYAPI MODE: DIRECT URL PLAYBACK (NO YOUTUBE API KEY)
+# ============================================================
+
+# Main API URL
 API_URL = getenv("API_URL", "https://BabyAPI.Pro")
 
-# === YOUTUBE API KEY ===
-# If YOUTUBE_API_KEY is not set, we use API_URL as the default (e.g., https://BabyAPI.Pro)
-YOUTUBE_API_KEY = getenv("YOUTUBE_API_KEY", API_URL)  # Already present or default to API_URL
+# Disable YouTube API key completely
+YOUTUBE_API_KEY = None
 
-# === YOUTUBE COOKIES ===
-# YOUTUBE_COOKIES can be:
-# - a path to a cookies.txt file (e.g., "/app/cookies.txt")
-# - or set YOUTUBE_COOKIES_FILE_CONTENT in your env to the raw cookies.txt contents;
-#   the code below will write it to cookies.txt at startup and use that file.
-YOUTUBE_COOKIES = getenv("YOUTUBE_COOKIES", "cookies.txt")
-YOUTUBE_COOKIES_FILE_CONTENT = getenv("YOUTUBE_COOKIES_FILE_CONTENT", None)
+# Disable YouTube cookies completely
+YOUTUBE_COOKIES = None
+YOUTUBE_COOKIES_FILE_CONTENT = None
 
-if YOUTUBE_COOKIES_FILE_CONTENT:
-    try:
-        cookies_path = os.path.join(os.getcwd(), "cookies.txt")
-        with open(cookies_path, "w", encoding="utf-8") as _f:
-            _f.write(YOUTUBE_COOKIES_FILE_CONTENT)
-        YOUTUBE_COOKIES = cookies_path
-    except Exception:
-        # if writing fails, keep YOUTUBE_COOKIES as-is; consumer should handle errors
-        pass
+# ============================================================
 
 BANNED_USERS = filters.user()
 adminlist = {}
@@ -130,20 +105,22 @@ SPOTIFY_ARTIST_IMG_URL = "https://graph.org/file/f0e790de4d84d5b4dab72-bc4dcadff
 SPOTIFY_ALBUM_IMG_URL = "https://graph.org/file/f0e790de4d84d5b4dab72-bc4dcadff42362281c.jpg"
 SPOTIFY_PLAYLIST_IMG_URL = "https://graph.org/file/f0e790de4d84d5b4dab72-bc4dcadff42362281c.jpg"
 
+
 def time_to_seconds(time):
     stringt = str(time)
     return sum(int(x) * 60**i for i, x in enumerate(reversed(stringt.split(":"))))
+
 
 DURATION_LIMIT = int(time_to_seconds(f"{DURATION_LIMIT_MIN}:00"))
 
 if SUPPORT_CHANNEL:
     if not re.match("(?:http|https)://", SUPPORT_CHANNEL):
         raise SystemExit(
-            "[ERROR] - Your SUPPORT_CHANNEL url is wrong. Please ensure that it starts with https://"
+            "[ERROR] - Your SUPPORT_CHANNEL url is wrong. It must start with https://"
         )
 
 if SUPPORT_CHAT:
     if not re.match("(?:http|https)://", SUPPORT_CHAT):
         raise SystemExit(
-            "[ERROR] - Your SUPPORT_CHAT url is wrong. Please ensure that it starts with https://"
+            "[ERROR] - Your SUPPORT_CHAT url is wrong. It must start with https://"
         )
