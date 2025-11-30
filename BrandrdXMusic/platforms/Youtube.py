@@ -11,12 +11,14 @@ from BrandrdXMusic.utils.youtube_api import search_youtube
 from BrandrdXMusic.utils.database import is_on_off
 from BrandrdXMusic.utils.formatters import time_to_seconds
 
+
 def cookie_txt_file():
     folder_path = f"{os.getcwd()}/cookies"
     txt_files = glob.glob(os.path.join(folder_path, '*.txt'))
     if not txt_files:
         raise FileNotFoundError("No .txt files found in the cookies folder.")
     return f"cookies/{random.choice(txt_files).split('/')[-1]}"
+
 
 class YouTubeAPI:
     def __init__(self):
@@ -41,22 +43,42 @@ class YouTubeAPI:
         return None
 
     async def details(self, link: str, videoid: Union[bool, str] = None):
-        if videoid:
-            link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
 
-        # link-based search
-        res = await search_youtube(link)
+        # -----------------------------------------
+        # 1) If link → extract video ID
+        # -----------------------------------------
+        if "youtube.com" in link or "youtu.be" in link:
+            try:
+                if "watch?v=" in link:
+                    vid = link.split("watch?v=")[1].split("&")[0]
+                elif "youtu.be/" in link:
+                    vid = link.split("youtu.be/")[1].split("?")[0]
+                else:
+                    vid = None
+            except:
+                vid = None
+
+            # Convert link → search using ID
+            res = await search_youtube(vid)
+        else:
+            # Normal query
+            res = await search_youtube(link)
+
+        # -----------------------------------------
+        # 2) If BabyAPI returns data
+        # -----------------------------------------
         if res:
             title = res.get("title")
-            duration_min = res.get("duration") or "0:00"
+            duration_min = res.get("duration", "0:00")
             thumbnail = (res.get("thumb") or "").split("?")[0]
             vidid = res.get("video_id")
             duration_sec = int(time_to_seconds(duration_min)) if duration_min else 0
+
             return title, duration_min, duration_sec, thumbnail, vidid
 
-        # fallback scraping
+        # -----------------------------------------
+        # 3) Fallback: scrape with youtubesearchpython
+        # -----------------------------------------
         results = VideosSearch(link, limit=1)
         for result in (await results.next())["result"]:
             title = result["title"]
@@ -64,6 +86,7 @@ class YouTubeAPI:
             thumbnail = result["thumbnails"][0]["url"].split("?")[0]
             vidid = result["id"]
             duration_sec = int(time_to_seconds(duration_min)) if duration_min else 0
+
         return title, duration_min, duration_sec, thumbnail, vidid
 
     async def track(self, link: str, videoid: Union[bool, str] = None):
