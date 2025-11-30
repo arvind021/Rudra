@@ -1,53 +1,76 @@
 import requests
-from config import API_URL
 from urllib.parse import quote_plus
 
+# BabyAPI Direct Search URL (no key needed)
+API_URL = "https://babyapi.pro/api/search?query="
+
+
 async def search_youtube(query):
+    """Search YouTube using BabyAPI.Pro (No YouTube API Required)."""
+    
     if not API_URL:
         return None
 
-    base = API_URL.rstrip('/')
-    tried_urls = [
-        f"{base}/search?q={quote_plus(query)}",
-        f"{base}/search?query={quote_plus(query)}",
-        f"{base}/search/{quote_plus(query)}",
-        f"{base}/?q={quote_plus(query)}",
-    ]
+    # Final API Endpoint
+    final_url = f"{API_URL}{quote_plus(query)}"
 
-    for api_call in tried_urls:
-        try:
-            resp = requests.get(api_call, timeout=10)
-        except Exception:
-            resp = None
-        if resp and resp.ok:
-            try:
-                data = resp.json()
-            except Exception:
-                continue
+    try:
+        response = requests.get(final_url, timeout=10)
+    except Exception:
+        return None
 
-            items = None
-            if isinstance(data, dict):
-                for k in ("results", "data", "items", "songs", "tracks"):
-                    if k in data and isinstance(data[k], list):
-                        items = data[k]
-                        break
-            elif isinstance(data, list):
-                items = data
+    if not response or not response.ok:
+        return None
 
-            if items and len(items) > 0:
-                it = items[0]
-                video_id = it.get("video_id") or it.get("id") or it.get("videoId") or it.get("vid")
-                title = it.get("title") or it.get("name")
-                thumb = it.get("thumbnail") or it.get("thumb") or it.get("thumbnailUrl")
-                url = it.get("url") or it.get("link") or it.get("webpage_url")
-                if not url and video_id:
-                    url = f"https://www.youtube.com/watch?v={video_id}"
-                if video_id and title and url:
-                    return {
-                        "video_id": video_id,
-                        "title": title,
-                        "thumb": thumb,
-                        "url": url
-                    }
+    # Parse JSON
+    try:
+        data = response.json()
+    except Exception:
+        return None
 
-    return None
+    # Extract result list
+    items = None
+
+    if isinstance(data, dict):
+        for key in ("results", "data", "items", "songs"):
+            if key in data and isinstance(data[key], list):
+                items = data[key]
+                break
+
+    # If BabyAPI returns a list directly
+    if isinstance(data, list):
+        items = data
+
+    if not items:
+        return None
+
+    # Choose first search result
+    item = items[0]
+
+    # Extract values from various possible key names
+    video_id = (
+        item.get("video_id")
+        or item.get("id")
+        or item.get("videoId")
+        or item.get("vid")
+    )
+
+    title = item.get("title") or item.get("name")
+    thumb = item.get("thumbnail") or item.get("thumb")
+
+    url = (
+        item.get("url")
+        or item.get("link")
+        or item.get("webpage_url")
+        or (f"https://www.youtube.com/watch?v={video_id}" if video_id else None)
+    )
+
+    if not video_id or not title:
+        return None
+
+    return {
+        "video_id": video_id,
+        "title": title,
+        "thumb": thumb,
+        "url": url
+    }
