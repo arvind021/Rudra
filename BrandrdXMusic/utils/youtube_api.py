@@ -1,76 +1,90 @@
 import requests
+from config import API_URL
 from urllib.parse import quote_plus
+import re
 
-# BabyAPI Direct Search URL (no key needed)
-API_URL = "https://babyapi.pro/api/search?query="
+
+def extract_video_id(url):
+    """Extract YouTube video ID from URL."""
+    patterns = [
+        r"youtube\.com/watch\?v=([^&#]+)",
+        r"youtube\.com/shorts/([^&#]+)",
+        r"youtu\.be/([^&#]+)"
+    ]
+    for p in patterns:
+        m = re.search(p, url)
+        if m:
+            return m.group(1)
+    return None
 
 
 async def search_youtube(query):
-    """Search YouTube using BabyAPI.Pro (No YouTube API Required)."""
-    
     if not API_URL:
         return None
 
-    # Final API Endpoint
-    final_url = f"{API_URL}{quote_plus(query)}"
+    base = API_URL.rstrip("/")
 
-    try:
-        response = requests.get(final_url, timeout=10)
-    except Exception:
-        return None
+    # ----- If YouTube URL → Extract video ID -----
+    vid = extract_video_id(query)
+    if vid:
+        query = vid  # convert link → ID
 
-    if not response or not response.ok:
-        return None
+    # ------------ TRY API URLs ------------
+    tried_urls = [
+        f"{base}/search?q={quote_plus(query)}",
+        f"{base}/search?query={quote_plus(query)}",
+        f"{base}/video?id={quote_plus(query)}",
+        f"{base}/search/{quote_plus(query)}",
+    ]
 
-    # Parse JSON
-    try:
-        data = response.json()
-    except Exception:
-        return None
+    for api_call in tried_urls:
+        try:
+            resp = requests.get(api_call, timeout=10)
+        except:
+            resp = None
 
-    # Extract result list
-    items = None
+        if resp and resp.ok:
+            try:
+                data = resp.json()
+            except:
+                continue
 
-    if isinstance(data, dict):
-        for key in ("results", "data", "items", "songs"):
-            if key in data and isinstance(data[key], list):
-                items = data[key]
-                break
+            # ----- Extract list of items -----
+            items = None
 
-    # If BabyAPI returns a list directly
-    if isinstance(data, list):
-        items = data
+            if isinstance(data, dict):
+                for k in ("results", "data", "items", "songs", "tracks"):
+                    if k in data and isinstance(data[k], list):
+                        items = data[k]
+                        break
 
-    if not items:
-        return None
+                # Some APIs return single result
+                if not items and "title" in data:
+                    items = [data]
 
-    # Choose first search result
-    item = items[0]
+            elif isinstance(data, list):
+                items = data
 
-    # Extract values from various possible key names
-    video_id = (
-        item.get("video_id")
-        or item.get("id")
-        or item.get("videoId")
-        or item.get("vid")
-    )
+            if not items:
+                continue
 
-    title = item.get("title") or item.get("name")
-    thumb = item.get("thumbnail") or item.get("thumb")
+            it = items[0]
 
-    url = (
-        item.get("url")
-        or item.get("link")
-        or item.get("webpage_url")
-        or (f"https://www.youtube.com/watch?v={video_id}" if video_id else None)
-    )
+            video_id = it.get("video_id") or it.get("id") or it.get("videoId") or it.get("vid")
+            title = it.get("title") or it.get("name")
+            thumb = it.get("thumbnail") or it.get("thumb") or it.get("thumbnailUrl")
+            url = it.get("url") or f"https://www.youtube.com/watch?v={video_id}"
 
-    if not video_id or not title:
-        return None
+            # ----- Duration Fix -----
+            duration = it.get("duration") or it.get("length") or it.get("time") or "0:00"
 
-    return {
-        "video_id": video_id,
-        "title": title,
-        "thumb": thumb,
-        "url": url
-    }
+            if video_id and title:
+                return {
+                    "video_id": video_id,
+                    "title": title,
+                    "thumb": thumb,
+                    "url": url,
+                    "duration": duration
+                }
+
+    return None
