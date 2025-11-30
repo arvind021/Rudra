@@ -12,9 +12,9 @@ from youtubesearchpython.__future__ import VideosSearch
 from BrandrdXMusic.utils.database import is_on_off
 from BrandrdXMusic.utils.formatters import time_to_seconds
 
+# NEW: unified search helper that will try Google YT key -> Baby API -> yt-dlp -> scraping
+from BrandrdXMusic.utils.youtube_api import search_youtube
 
-
-import os
 import glob
 import random
 import logging
@@ -29,8 +29,6 @@ def cookie_txt_file():
     with open(filename, 'a') as file:
         file.write(f'Choosen File : {cookie_txt_file}\n')
     return f"""cookies/{str(cookie_txt_file).split("/")[-1]}"""
-
-
 
 async def check_file_size(link):
     async def get_format_info(link):
@@ -58,12 +56,12 @@ async def check_file_size(link):
     info = await get_format_info(link)
     if info is None:
         return None
-    
+
     formats = info.get('formats', [])
     if not formats:
         print("No formats found.")
         return None
-    
+
     total_size = parse_size(formats)
     return total_size
 
@@ -127,6 +125,29 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
+
+        # TRY unified search (Google -> Baby API -> yt-dlp -> scraping)
+        try:
+            res = await search_youtube(link)
+        except Exception:
+            res = None
+
+        if res:
+            title = res.get("title")
+            # try to pick duration field if returned
+            duration_min = res.get("duration") or res.get("duration_min") or res.get("length") or "0:00"
+            thumbnail = (res.get("thumb") or res.get("thumbnail") or "").split("?")[0]
+            vidid = res.get("video_id") or res.get("id")
+            if str(duration_min) == "None":
+                duration_sec = 0
+            else:
+                try:
+                    duration_sec = int(time_to_seconds(duration_min))
+                except Exception:
+                    duration_sec = 0
+            return title, duration_min, duration_sec, thumbnail, vidid
+
+        # FALLBACK: existing VideosSearch logic
         results = VideosSearch(link, limit=1)
         for result in (await results.next())["result"]:
             title = result["title"]
@@ -144,6 +165,14 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
+
+        try:
+            res = await search_youtube(link)
+        except Exception:
+            res = None
+        if res and res.get("title"):
+            return res.get("title")
+
         results = VideosSearch(link, limit=1)
         for result in (await results.next())["result"]:
             title = result["title"]
@@ -154,6 +183,14 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
+
+        try:
+            res = await search_youtube(link)
+        except Exception:
+            res = None
+        if res and res.get("duration"):
+            return res.get("duration")
+
         results = VideosSearch(link, limit=1)
         for result in (await results.next())["result"]:
             duration = result["duration"]
@@ -164,6 +201,15 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
+
+        try:
+            res = await search_youtube(link)
+        except Exception:
+            res = None
+        if res and (res.get("thumb") or res.get("thumbnail")):
+            thumb = (res.get("thumb") or res.get("thumbnail")).split("?")[0]
+            return thumb
+
         results = VideosSearch(link, limit=1)
         for result in (await results.next())["result"]:
             thumbnail = result["thumbnails"][0]["url"].split("?")[0]
@@ -212,6 +258,27 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
+
+        try:
+            res = await search_youtube(link)
+        except Exception:
+            res = None
+
+        if res:
+            title = res.get("title")
+            duration_min = res.get("duration") or res.get("duration_min") or "0:00"
+            vidid = res.get("video_id") or res.get("id")
+            yturl = res.get("url") or (f"https://www.youtube.com/watch?v={vidid}" if vidid else None)
+            thumbnail = (res.get("thumb") or res.get("thumbnail") or "").split("?")[0]
+            track_details = {
+                "title": title,
+                "link": yturl,
+                "vidid": vidid,
+                "duration_min": duration_min,
+                "thumb": thumbnail,
+            }
+            return track_details, vidid
+
         results = VideosSearch(link, limit=1)
         for result in (await results.next())["result"]:
             title = result["title"]
@@ -274,13 +341,30 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
-        a = VideosSearch(link, limit=10)
-        result = (await a.next()).get("result")
-        title = result[query_type]["title"]
-        duration_min = result[query_type]["duration"]
-        vidid = result[query_type]["id"]
-        thumbnail = result[query_type]["thumbnails"][0]["url"].split("?")[0]
-        return title, duration_min, thumbnail, vidid
+
+        try:
+            # For slider we still try VideosSearch with limit 10; if your Baby API supports list results
+            # you can extend search_youtube to return a list and then use that here.
+            a = VideosSearch(link, limit=10)
+            result = (await a.next()).get("result")
+            title = result[query_type]["title"]
+            duration_min = result[query_type]["duration"]
+            vidid = result[query_type]["id"]
+            thumbnail = result[query_type]["thumbnails"][0]["url"].split("?")[0]
+            return title, duration_min, thumbnail, vidid
+        except Exception:
+            # If VideosSearch fails, try single search_youtube and return it as index 0
+            try:
+                res = await search_youtube(link)
+            except Exception:
+                res = None
+            if res:
+                title = res.get("title")
+                duration_min = res.get("duration") or res.get("duration_min") or "0:00"
+                vidid = res.get("video_id") or res.get("id")
+                thumbnail = (res.get("thumb") or res.get("thumbnail") or "").split("?")[0]
+                return title, duration_min, thumbnail, vidid
+            raise
 
     async def download(
         self,
@@ -296,6 +380,7 @@ class YouTubeAPI:
         if videoid:
             link = self.base + link
         loop = asyncio.get_running_loop()
+
         def audio_dl():
             ydl_optssx = {
                 "format": "bestaudio/best",
@@ -399,7 +484,7 @@ class YouTubeAPI:
                     downloaded_file = stdout.decode().split("\n")[0]
                     direct = False
                 else:
-                    
+
                     direct = True
                     downloaded_file = await loop.run_in_executor(None, video_dl)
         else:
